@@ -2,8 +2,10 @@ package com.zzg.mybatis.generator.plugins;
 
 import org.mybatis.generator.api.*;
 import org.mybatis.generator.api.dom.java.*;
+import org.mybatis.generator.api.dom.xml.XmlElement;
 import org.mybatis.generator.exception.ShellException;
 import org.mybatis.generator.internal.DefaultShellCallback;
+import org.mybatis.generator.internal.util.StringUtility;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,8 +20,6 @@ import static org.mybatis.generator.internal.util.StringUtility.stringHasValue;
  */
 public class CommonDAOInterfacePlugin extends PluginAdapter {
 
-    private static final String DEFAULT_DAO_SUPER_CLASS = ".MyBatisBaseDao";
-    private static final FullyQualifiedJavaType SERIALIZEBLE_TYPE = new FullyQualifiedJavaType("java.io.Serializable");
 
     private List<Method> methods = new ArrayList<>();
 
@@ -28,107 +28,17 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     public CommonDAOInterfacePlugin() {
         shellCallback = new DefaultShellCallback(false);
     }
-    
-    private boolean isUseExample() {
-    	return "true".equals(getProperties().getProperty("useExample"));
-	}
-
-    @Override
-    public List<GeneratedJavaFile> contextGenerateAdditionalJavaFiles(IntrospectedTable introspectedTable) {
-        boolean hasPk = introspectedTable.hasPrimaryKeyColumns();
-        JavaFormatter javaFormatter = context.getJavaFormatter();
-        String daoTargetDir = context.getJavaClientGeneratorConfiguration().getTargetProject();
-        String daoTargetPackage = context.getJavaClientGeneratorConfiguration().getTargetPackage();
-        List<GeneratedJavaFile> mapperJavaFiles = new ArrayList<>();
-        String javaFileEncoding = context.getProperty("javaFileEncoding");
-        Interface mapperInterface = new Interface(daoTargetPackage + DEFAULT_DAO_SUPER_CLASS);
-
-        if (stringHasValue(daoTargetPackage)) {
-            mapperInterface.addImportedType(SERIALIZEBLE_TYPE);
-
-            mapperInterface.setVisibility(JavaVisibility.PUBLIC);
-            mapperInterface.addJavaDocLine("/**");
-            mapperInterface.addJavaDocLine(" * " + "DAO公共基类，由MybatisGenerator自动生成请勿修改");
-            mapperInterface.addJavaDocLine(" * " + "@param <Model> The Model Class 这里是泛型不是Model类");
-            mapperInterface.addJavaDocLine(" * " + "@param <PK> The Primary Key Class 如果是无主键，则可以用Model来跳过，如果是多主键则是Key类");
-			if (isUseExample()) {
-				mapperInterface.addJavaDocLine(" * " + "@param <E> The Example Class");
-			}
-            mapperInterface.addJavaDocLine(" */");
-
-            FullyQualifiedJavaType daoBaseInterfaceJavaType = mapperInterface.getType();
-            daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("Model"));
-            daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("PK extends Serializable"));
-			if (isUseExample()) {
-				daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("E"));
-			}
-
-            if (!this.methods.isEmpty()) {
-                for (Method method : methods) {
-                    mapperInterface.addMethod(method);
-                }
-            }
-
-            List<GeneratedJavaFile> generatedJavaFiles = introspectedTable.getGeneratedJavaFiles();
-            for (GeneratedJavaFile generatedJavaFile : generatedJavaFiles) {
-                CompilationUnit compilationUnit = generatedJavaFile.getCompilationUnit();
-                FullyQualifiedJavaType type = compilationUnit.getType();
-                String modelName = type.getShortName();
-                if (modelName.endsWith("DAO")) {
-                }
-            }
-            GeneratedJavaFile mapperJavafile = new GeneratedJavaFile(mapperInterface, daoTargetDir, javaFileEncoding, javaFormatter);
-            try {
-                File mapperDir = shellCallback.getDirectory(daoTargetDir, daoTargetPackage);
-                File mapperFile = new File(mapperDir, mapperJavafile.getFileName());
-                // 文件不存在
-                if (!mapperFile.exists()) {
-                    mapperJavaFiles.add(mapperJavafile);
-                }
-            } catch (ShellException e) {
-                e.printStackTrace();
-            }
-        }
-        return mapperJavaFiles;
-    }
 
     @Override
     public boolean clientGenerated(Interface interfaze,
                                    TopLevelClass topLevelClass,
                                    IntrospectedTable introspectedTable) {
-        interfaze.addJavaDocLine("/**");
-        interfaze.addJavaDocLine(" * " + interfaze.getType().getShortName() + "继承基类");
-        interfaze.addJavaDocLine(" */");
+        //获取实体类
+        FullyQualifiedJavaType entityType = new FullyQualifiedJavaType(introspectedTable.getBaseRecordType());
+        //import实体类
+        interfaze.addImportedType(new FullyQualifiedJavaType("com.baomidou.mybatisplus.core.mapper.BaseMapper"));
+        interfaze.addImportedType(entityType);
 
-        String daoSuperClass = interfaze.getType().getPackageName() + DEFAULT_DAO_SUPER_CLASS;
-        FullyQualifiedJavaType daoSuperType = new FullyQualifiedJavaType(daoSuperClass);
-
-        String targetPackage = introspectedTable.getContext().getJavaModelGeneratorConfiguration().getTargetPackage();
-
-        String domainObjectName = introspectedTable.getTableConfiguration().getDomainObjectName();
-        FullyQualifiedJavaType baseModelJavaType = new FullyQualifiedJavaType(targetPackage + "." + domainObjectName);
-        daoSuperType.addTypeArgument(baseModelJavaType);
-
-        FullyQualifiedJavaType primaryKeyTypeJavaType = null;
-        if (introspectedTable.getPrimaryKeyColumns().size() > 1) {
-            primaryKeyTypeJavaType = new FullyQualifiedJavaType(targetPackage + "." + domainObjectName + "Key");
-        }else if(introspectedTable.hasPrimaryKeyColumns()){
-            primaryKeyTypeJavaType = introspectedTable.getPrimaryKeyColumns().get(0).getFullyQualifiedJavaType();
-        }else {
-            primaryKeyTypeJavaType = baseModelJavaType;
-        }
-        daoSuperType.addTypeArgument(primaryKeyTypeJavaType);
-		interfaze.addImportedType(primaryKeyTypeJavaType);
-
-		if (isUseExample()) {
-			String exampleType = introspectedTable.getExampleType();
-			FullyQualifiedJavaType exampleTypeJavaType = new FullyQualifiedJavaType(exampleType);
-			daoSuperType.addTypeArgument(exampleTypeJavaType);
-			interfaze.addImportedType(exampleTypeJavaType);
-		}
-        interfaze.addImportedType(baseModelJavaType);
-        interfaze.addImportedType(daoSuperType);
-        interfaze.addSuperInterface(daoSuperType);
         return true;
     }
 
@@ -137,176 +47,200 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
         return true;
     }
 
-    private void interceptExampleParam(Method method) {
-		if (isUseExample()) {
-			method.getParameters().clear();
-			method.addParameter(new Parameter(new FullyQualifiedJavaType("E"), "example"));
-			methods.add(method);
-		}
+    private void processEntityClass(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        Method method = new Method();
+        method.addAnnotation("@Override");
+        method.setVisibility(JavaVisibility.PROTECTED);
+        method.setReturnType(new FullyQualifiedJavaType("Serializable"));
+        method.setName("pkVal");
+        topLevelClass.getFields().stream()
+                .filter(field -> field.getAnnotations().stream()
+                        .anyMatch(annotation -> annotation.contains("@TableId")))
+                .findFirst()
+                .ifPresent(field -> {
+                    method.addBodyLine("return this." + field.getName() + ";");
+                });
+        topLevelClass.addMethod(method);
     }
-
-    private void interceptPrimaryKeyParam(Method method) {
-        method.getParameters().clear();
-        method.addParameter(new Parameter(new FullyQualifiedJavaType("PK"), "id"));
-        methods.add(method);
-    }
-
-    private void interceptModelParam(Method method) {
-        method.getParameters().clear();
-        method.addParameter(new Parameter(new FullyQualifiedJavaType("Model"), "record"));
-        methods.add(method);
-    }
-
-    private void interceptModelAndExampleParam(Method method) {
-		if (isUseExample()) {
-			List<Parameter> parameters = method.getParameters();
-			if (parameters.size() == 1) {
-				interceptExampleParam(method);
-			}else{
-				method.getParameters().clear();
-				Parameter parameter1 = new Parameter(new FullyQualifiedJavaType("Model"), "record");
-				parameter1.addAnnotation("@Param(\"record\")");
-				method.addParameter(parameter1);
-
-				Parameter parameter2 = new Parameter(new FullyQualifiedJavaType("E"), "example");
-				parameter2.addAnnotation("@Param(\"example\")");
-				method.addParameter(parameter2);
-				methods.add(method);
-			}
-		}
-    }
-
+    /**
+     * 生成基础实体类
+     *
+     * @param topLevelClass
+     * @param introspectedTable
+     * @return
+     */
     @Override
-    public boolean clientCountByExampleMethodGenerated(Method method,
-                                                       Interface interfaze, IntrospectedTable introspectedTable) {
-//        interface
-		if (isUseExample()) {
-			interceptExampleParam(method);
-		}
-		return false;
-	}
+    public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        processEntityClass(topLevelClass, introspectedTable);
+        return true;
+    }
 
-
+    /**
+     * 生成实体类注解KEY对象
+     *
+     * @param topLevelClass
+     * @param introspectedTable
+     * @return
+     */
     @Override
-    public boolean clientDeleteByExampleMethodGenerated(Method method,
-                                                        Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptExampleParam(method);
-		}
+    public boolean modelPrimaryKeyClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        processEntityClass(topLevelClass, introspectedTable);
+        return true;
+    }
+
+    /**
+     * 生成带BLOB字段的对象
+     *
+     * @param topLevelClass
+     * @param introspectedTable
+     * @return
+     */
+    @Override
+    public boolean modelRecordWithBLOBsClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        processEntityClass(topLevelClass, introspectedTable);
         return false;
     }
 
 
+    //下面所有return false的方法都不生成。这些都是基础的CRUD方法，使用通用Mapper实现
     @Override
-    public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method,
-                                                           Interface interfaze, IntrospectedTable introspectedTable) {
-    	interceptPrimaryKeyParam(method);
+    public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientInsertMethodGenerated(Method method, Interface interfaze,
-                                                  IntrospectedTable introspectedTable) {
-        interceptModelParam(method);
+    public boolean clientInsertMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientSelectByExampleWithBLOBsMethodGenerated(Method method,
-                                                                 Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptExampleParam(method);
-			method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
-		}
+    public boolean clientInsertSelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientSelectByExampleWithoutBLOBsMethodGenerated(Method method,
-                                                                    Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptExampleParam(method);
-			method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
-		}
+    public boolean clientSelectByPrimaryKeyMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientSelectByPrimaryKeyMethodGenerated(Method method,
-                                                           Interface interfaze, IntrospectedTable introspectedTable) {
-    	interceptPrimaryKeyParam(method);
-        method.setReturnType(new FullyQualifiedJavaType("Model"));
+    public boolean clientUpdateByPrimaryKeySelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientUpdateByExampleSelectiveMethodGenerated(Method method,
-                                                                 Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptModelAndExampleParam(method);
-		}
+    public boolean clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientUpdateByExampleWithBLOBsMethodGenerated(Method method,
-                                                                 Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptModelAndExampleParam(method);
-		}
+    public boolean clientUpdateByPrimaryKeyWithoutBLOBsMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientUpdateByExampleWithoutBLOBsMethodGenerated(Method method,
-                                                                    Interface interfaze, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptModelAndExampleParam(method);
-		}
+    public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
-    public boolean clientUpdateByPrimaryKeySelectiveMethodGenerated(Method method,
-                                                                    Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelParam(method);
-        return false;
-    }
-
-    @Override
-    public boolean clientUpdateByExampleWithoutBLOBsMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptModelAndExampleParam(method);
-		}
-        return false;
-    }
-
-    @Override
-    public boolean clientUpdateByExampleSelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        if (isUseExample()) {
-			interceptModelAndExampleParam(method);
-		}
-        return false;
-    }
-
-    @Override
-    public boolean clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(Method method,
-                                                                    Interface interfaze, IntrospectedTable introspectedTable) {
-    	interceptModelParam(method);
-        return false;
-    }
-
-    @Override
-    public boolean clientUpdateByPrimaryKeyWithoutBLOBsMethodGenerated(
-            Method method, Interface interfaze,
-            IntrospectedTable introspectedTable) {
-        interceptModelParam(method);
+    public boolean clientInsertMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
         return false;
     }
 
     @Override
     public boolean clientInsertSelectiveMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelParam(method);
         return false;
     }
+
+    @Override
+    public boolean clientSelectAllMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean clientSelectAllMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean clientSelectByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean clientUpdateByPrimaryKeySelectiveMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean clientUpdateByPrimaryKeyWithoutBLOBsMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapDeleteByPrimaryKeyElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapInsertElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapInsertSelectiveElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapSelectAllElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapSelectByPrimaryKeyElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapUpdateByPrimaryKeySelectiveElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapUpdateByPrimaryKeyWithBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean sqlMapUpdateByPrimaryKeyWithoutBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean providerGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean providerApplyWhereMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean providerInsertSelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
+    @Override
+    public boolean providerUpdateByPrimaryKeySelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        return false;
+    }
+
 }

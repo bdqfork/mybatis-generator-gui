@@ -56,7 +56,7 @@ public class MybatisGeneratorBridge {
 
     public void generate() throws Exception {
         Configuration configuration = new Configuration();
-        Context context = new Context(ModelType.CONDITIONAL);
+        Context context = new Context(ModelType.FLAT);
         configuration.addContext(context);
 		
         context.addProperty("javaFileEncoding", "UTF-8");
@@ -69,12 +69,12 @@ public class MybatisGeneratorBridge {
         TableConfiguration tableConfig = new TableConfiguration(context);
         tableConfig.setTableName(generatorConfig.getTableName());
         tableConfig.setDomainObjectName(generatorConfig.getDomainObjectName());
-        if(!generatorConfig.isUseExample()) {
-            tableConfig.setUpdateByExampleStatementEnabled(false);
-            tableConfig.setCountByExampleStatementEnabled(false);
-            tableConfig.setDeleteByExampleStatementEnabled(false);
-            tableConfig.setSelectByExampleStatementEnabled(false);
-        }
+
+        tableConfig.setUpdateByExampleStatementEnabled(false);
+        tableConfig.setCountByExampleStatementEnabled(false);
+        tableConfig.setDeleteByExampleStatementEnabled(false);
+        tableConfig.setSelectByExampleStatementEnabled(false);
+
 
 		context.addProperty("autoDelimitKeywords", "true");
 		if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)) {
@@ -155,15 +155,19 @@ public class MybatisGeneratorBridge {
         JavaModelGeneratorConfiguration modelConfig = new JavaModelGeneratorConfiguration();
         modelConfig.setTargetPackage(generatorConfig.getModelPackage());
         modelConfig.setTargetProject(generatorConfig.getProjectFolder() + "/" + generatorConfig.getModelPackageTargetFolder());
+        modelConfig.addProperty("rootClass", "Model<" + generatorConfig.getDomainObjectName() + ">");
+
         // Mapper configuration
         SqlMapGeneratorConfiguration mapperConfig = new SqlMapGeneratorConfiguration();
         mapperConfig.setTargetPackage(generatorConfig.getMappingXMLPackage());
         mapperConfig.setTargetProject(generatorConfig.getProjectFolder() + "/" + generatorConfig.getMappingXMLTargetFolder());
+
         // DAO
         JavaClientGeneratorConfiguration daoConfig = new JavaClientGeneratorConfiguration();
         daoConfig.setConfigurationType("XMLMAPPER");
         daoConfig.setTargetPackage(generatorConfig.getDaoPackage());
         daoConfig.setTargetProject(generatorConfig.getProjectFolder() + "/" + generatorConfig.getDaoTargetFolder());
+        daoConfig.addProperty("rootInterface", "BaseMapper<" + generatorConfig.getDomainObjectName() + ">");
 
 
         context.setId("myid");
@@ -235,25 +239,14 @@ public class MybatisGeneratorBridge {
                 context.addPluginConfiguration(pluginConfiguration);
             }
         }
-        //repository 插件
-        if(generatorConfig.isAnnotationDAO()) {
-            if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)
-                    || DbType.PostgreSQL.name().equals(dbType)) {
-                PluginConfiguration pluginConfiguration = new PluginConfiguration();
-                pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.RepositoryPlugin");
-                pluginConfiguration.setConfigurationType("com.zzg.mybatis.generator.plugins.RepositoryPlugin");
-                context.addPluginConfiguration(pluginConfiguration);
-            }
-        }
-        if (generatorConfig.isUseDAOExtendStyle()) {
-            if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)
-                    || DbType.PostgreSQL.name().equals(dbType)) {
-                PluginConfiguration pluginConfiguration = new PluginConfiguration();
-				pluginConfiguration.addProperty("useExample", String.valueOf(generatorConfig.isUseExample()));
-				pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.CommonDAOInterfacePlugin");
-                pluginConfiguration.setConfigurationType("com.zzg.mybatis.generator.plugins.CommonDAOInterfacePlugin");
-                context.addPluginConfiguration(pluginConfiguration);
-            }
+
+        if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)
+                || DbType.PostgreSQL.name().equals(dbType)) {
+            PluginConfiguration pluginConfiguration = new PluginConfiguration();
+            pluginConfiguration.addProperty("useExample", String.valueOf(generatorConfig.isUseExample()));
+            pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.CommonDAOInterfacePlugin");
+            pluginConfiguration.setConfigurationType("com.zzg.mybatis.generator.plugins.CommonDAOInterfacePlugin");
+            context.addPluginConfiguration(pluginConfiguration);
         }
 
         context.setTargetRuntime("MyBatis3");

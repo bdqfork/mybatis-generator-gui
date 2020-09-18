@@ -40,6 +40,8 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
     private Properties properties;
     private boolean columnRemarks;
     private boolean isAnnotations;
+    private String logicDeleteFlagColumnName = "";
+    private String optimisticLockerColumnName = "";
 
     public DbRemarksCommentGenerator() {
         super();
@@ -49,13 +51,6 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
 
     public void addJavaFileComment(CompilationUnit compilationUnit) {
         // add no file level comments by default
-        if (isAnnotations) {
-            compilationUnit.addImportedType(new FullyQualifiedJavaType("javax.persistence.Table"));
-            compilationUnit.addImportedType(new FullyQualifiedJavaType("javax.persistence.Id"));
-            compilationUnit.addImportedType(new FullyQualifiedJavaType("javax.persistence.Column"));
-            compilationUnit.addImportedType(new FullyQualifiedJavaType("javax.persistence.GeneratedValue"));
-            compilationUnit.addImportedType(new FullyQualifiedJavaType("org.hibernate.validator.constraints.NotEmpty"));
-        }
     }
 
     /**
@@ -109,13 +104,20 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
 
     public void addModelClassComment(TopLevelClass topLevelClass,
                                 IntrospectedTable introspectedTable) {
+        topLevelClass.addImportedType("com.baomidou.mybatisplus.annotation.*");
+        topLevelClass.addImportedType("com.baomidou.mybatisplus.extension.activerecord.Model");
+        topLevelClass.addImportedType("com.baomidou.mybatisplus.enums.*");
+        topLevelClass.addImportedType("java.io.Serializable");
+
         topLevelClass.addJavaDocLine("/**");
         topLevelClass.addJavaDocLine(" * @author ");
         topLevelClass.addJavaDocLine(" * " + introspectedTable.getRemarks());
         topLevelClass.addJavaDocLine(" */");
-        if(isAnnotations) {
-            topLevelClass.addAnnotation("@Table(name=\"" + introspectedTable.getFullyQualifiedTableNameAtRuntime() + "\")");
-        }
+
+        String tableName = introspectedTable.getFullyQualifiedTableNameAtRuntime();
+
+        topLevelClass.addAnnotation("@TableName(\"" + tableName + "\")");
+
     }
 
     public void addEnumComment(InnerEnum innerEnum,
@@ -125,6 +127,7 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
     public void addFieldComment(Field field,
             IntrospectedTable introspectedTable,
             IntrospectedColumn introspectedColumn) {
+
         if (StringUtility.stringHasValue(introspectedColumn.getRemarks())) {
             field.addJavaDocLine("/**");
             StringBuilder sb = new StringBuilder();
@@ -134,29 +137,36 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
             field.addJavaDocLine(" */");
         }
 
-        if (isAnnotations) {
-            boolean isId = false;
-            for (IntrospectedColumn column : introspectedTable.getPrimaryKeyColumns()) {
-                if (introspectedColumn == column) {
-                    isId = true;
-                    field.addAnnotation("@Id");
-                    field.addAnnotation("@GeneratedValue");
-                    break;
-                }
-            }
-            if (!introspectedColumn.isNullable() && !isId){
-                field.addAnnotation("@NotEmpty");
-            }
-            if (introspectedColumn.isIdentity()) {
-                if (introspectedTable.getTableConfiguration().getGeneratedKey().getRuntimeSqlStatement().equals("JDBC")) {
-                    field.addAnnotation("@GeneratedValue(generator = \"JDBC\")");
+        //添加注解
+        if (field.isTransient()) {
+            //@Column
+            field.addAnnotation("@Transient");
+        }
+        for (IntrospectedColumn column : introspectedTable.getPrimaryKeyColumns()) {
+            if (introspectedColumn == column) {
+                if (column.isAutoIncrement()) {
+                    field.addAnnotation("@TableId(value = \"" + column.getActualColumnName() + "\", type= IdType.AUTO)");
                 } else {
-                    field.addAnnotation("@GeneratedValue(strategy = GenerationType.IDENTITY)");
+                    field.addAnnotation("@TableId(value = \"" + column.getActualColumnName() + "\", type= IdType.INPUT)");
                 }
-            } else if (introspectedColumn.isSequenceColumn()) {
-                field.addAnnotation("@SequenceGenerator(name=\"\",sequenceName=\"" + introspectedTable.getTableConfiguration().getGeneratedKey().getRuntimeSqlStatement() + "\")");
+                return;
             }
         }
+        String column = introspectedColumn.getActualColumnName();
+        if (column.equals(logicDeleteFlagColumnName)) {
+            field.addAnnotation("@TableLogic");
+        }
+        if (column.equals(optimisticLockerColumnName)) {
+            field.addAnnotation("@Version");
+        }
+        if (StringUtility.stringContainsSpace(column) || introspectedTable.getTableConfiguration().isAllColumnDelimitingEnabled()) {
+            column = introspectedColumn.getContext().getBeginningDelimiter()
+                    + column
+                    + introspectedColumn.getContext().getEndingDelimiter();
+        }
+        field.addAnnotation("@TableField(\"" + column + "\")");
+
+
     }
 
     public void addFieldComment(Field field, IntrospectedTable introspectedTable) {
