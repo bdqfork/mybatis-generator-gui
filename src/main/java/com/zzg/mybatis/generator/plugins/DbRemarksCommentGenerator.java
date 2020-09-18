@@ -39,13 +39,11 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
 
     private Properties properties;
     private boolean columnRemarks;
-    private boolean isAnnotations;
-    private String logicDeleteFlagColumnName = "";
-    private String optimisticLockerColumnName = "";
 
     public DbRemarksCommentGenerator() {
         super();
         properties = new Properties();
+
     }
 
 
@@ -92,10 +90,6 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
 
 	public void addConfigurationProperties(Properties properties) {
         this.properties.putAll(properties);
-        columnRemarks = isTrue(properties
-                .getProperty("columnRemarks"));
-        isAnnotations = isTrue(properties
-                .getProperty("annotations"));
     }
 
     public void addClassComment(InnerClass innerClass,
@@ -153,10 +147,10 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
             }
         }
         String column = introspectedColumn.getActualColumnName();
-        if (column.equals(logicDeleteFlagColumnName)) {
+        if (isLogicDeleteColumn(column)) {
             field.addAnnotation("@TableLogic");
         }
-        if (column.equals(optimisticLockerColumnName)) {
+        if (isOptimisticLockerColumn(column)) {
             field.addAnnotation("@Version");
         }
         if (StringUtility.stringContainsSpace(column) || introspectedTable.getTableConfiguration().isAllColumnDelimitingEnabled()) {
@@ -167,6 +161,14 @@ public class DbRemarksCommentGenerator implements CommentGenerator {
         field.addAnnotation("@TableField(\"" + column + "\")");
 
 
+    }
+
+    private  boolean isLogicDeleteColumn(String column){
+        return column.equals(properties.getProperty("logicDeleteFlagColumnName"));
+    }
+
+    private  boolean isOptimisticLockerColumn(String column){
+        return column.equals(properties.getProperty("optimisticLockerColumnName"));
     }
 
     public void addFieldComment(Field field, IntrospectedTable introspectedTable) {

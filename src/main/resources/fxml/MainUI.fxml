@@ -117,10 +117,10 @@
                                     <Insets left="5.0" />
                                  </GridPane.margin>
                               </HBox>
-                              <Label text="主键(选填)" GridPane.rowIndex="2" />
+                              <Label text="乐观锁(选填)" GridPane.rowIndex="2" />
                               <HBox alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                                  <children>
-                                            <TextField fx:id="generateKeysField" prefHeight="25.0" prefWidth="216.0" promptText="primary key, such as id" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                            <TextField fx:id="optimisticLockerColumnName" prefHeight="25.0" prefWidth="216.0" promptText="optimistic locker, such as version" GridPane.columnIndex="1" GridPane.rowIndex="3">
                                                 <GridPane.margin>
                                                     <Insets left="5.0" right="5.0" />
                                                 </GridPane.margin>
@@ -273,12 +273,12 @@
                                      </Button>
                                  </children>
                               </HBox>
-                              <Label text="自定义接口名称(选填)" GridPane.rowIndex="6">
+                              <Label text="逻辑删除字段(选填)" GridPane.rowIndex="6">
                                  <padding>
                                     <Insets left="5.0" />
                                  </padding>
                               </Label>
-                              <TextField fx:id="mapperName" prefHeight="27.0" prefWidth="532.0" promptText="PersonDAO" GridPane.columnIndex="1" GridPane.columnSpan="4" GridPane.rowIndex="6">
+                              <TextField fx:id="logicDeleteFlagColumnName" prefHeight="27.0" prefWidth="532.0" promptText="delete_flag" GridPane.columnIndex="1" GridPane.columnSpan="4" GridPane.rowIndex="6">
                                  <GridPane.margin>
                                     <Insets left="5.0" />
                                  </GridPane.margin>

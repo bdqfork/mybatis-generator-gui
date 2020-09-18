@@ -26,7 +26,7 @@ public class GeneratorConfig {
 
 	private String daoTargetFolder;
 
-	private String mapperName;
+	private String logicDeleteFlagColumnName;
 
 	private String mappingXMLPackage;
 
@@ -56,7 +56,7 @@ public class GeneratorConfig {
 
 	private boolean useExample;
 
-	private String generateKeys;
+	private String optimisticLockerColumnName;
 
 	private String encoding;
 
@@ -244,20 +244,20 @@ public class GeneratorConfig {
 		this.useActualColumnNames = useActualColumnNames;
 	}
 
-	public String getMapperName() {
-		return mapperName;
+	public String getLogicDeleteFlagColumnName() {
+		return logicDeleteFlagColumnName;
 	}
 
-	public void setMapperName(String mapperName) {
-		this.mapperName = mapperName;
+	public void setLogicDeleteFlagColumnName(String logicDeleteFlagColumnName) {
+		this.logicDeleteFlagColumnName = logicDeleteFlagColumnName;
 	}
 
-	public String getGenerateKeys() {
-		return generateKeys;
+	public String getOptimisticLockerColumnName() {
+		return optimisticLockerColumnName;
 	}
 
-	public void setGenerateKeys(String generateKeys) {
-		this.generateKeys = generateKeys;
+	public void setOptimisticLockerColumnName(String optimisticLockerColumnName) {
+		this.optimisticLockerColumnName = optimisticLockerColumnName;
 	}
 
     public String getEncoding() {

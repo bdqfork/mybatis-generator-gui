@@ -61,7 +61,7 @@ public class MainUIController extends BaseFXController {
     @FXML
     private TextField domainObjectNameField;
     @FXML
-    private TextField generateKeysField;	//主键ID
+    private TextField optimisticLockerColumnName;	//主键ID
     @FXML
     private TextField modelTargetProject;
     @FXML
@@ -69,7 +69,7 @@ public class MainUIController extends BaseFXController {
     @FXML
     private TextField daoTargetProject;
     @FXML
-    private TextField mapperName;
+    private TextField logicDeleteFlagColumnName;
     @FXML
     private TextField projectFolderField;
     @FXML
@@ -215,7 +215,7 @@ public class MainUIController extends BaseFXController {
                         this.tableName = tableName;
                         tableNameField.setText(tableName);
                         domainObjectNameField.setText(MyStringUtils.dbStringToCamelStyle(tableName));
-                        mapperName.setText(domainObjectNameField.getText().concat("DAO"));
+                        logicDeleteFlagColumnName.setText(domainObjectNameField.getText().concat("DAO"));
                     }
                 }
             });
@@ -229,7 +229,7 @@ public class MainUIController extends BaseFXController {
 
 	private void setTooltip() {
 		encodingChoice.setTooltip(new Tooltip("生成文件的编码，必选"));
-		generateKeysField.setTooltip(new Tooltip("insert时可以返回主键ID"));
+        optimisticLockerColumnName.setTooltip(new Tooltip("乐观锁字段"));
 		offsetLimitCheckBox.setTooltip(new Tooltip("是否要生成分页查询代码"));
 		commentCheckBox.setTooltip(new Tooltip("使用数据库的列注释作为实体类字段名的Java注释 "));
 		useActualColumnNamesCheckbox.setTooltip(new Tooltip("是否使用数据库实际的列名作为实体类域的名称"));
@@ -379,11 +379,11 @@ public class MainUIController extends BaseFXController {
         GeneratorConfig generatorConfig = new GeneratorConfig();
         generatorConfig.setProjectFolder(projectFolderField.getText());
         generatorConfig.setModelPackage(modelTargetPackage.getText());
-        generatorConfig.setGenerateKeys(generateKeysField.getText());
+        generatorConfig.setOptimisticLockerColumnName(optimisticLockerColumnName.getText());
         generatorConfig.setModelPackageTargetFolder(modelTargetProject.getText());
         generatorConfig.setDaoPackage(daoTargetPackage.getText());
         generatorConfig.setDaoTargetFolder(daoTargetProject.getText());
-        generatorConfig.setMapperName(mapperName.getText());
+        generatorConfig.setLogicDeleteFlagColumnName(logicDeleteFlagColumnName.getText());
         generatorConfig.setMappingXMLPackage(mapperTargetPackage.getText());
         generatorConfig.setMappingXMLTargetFolder(mappingTargetProject.getText());
         generatorConfig.setTableName(tableNameField.getText());
@@ -409,11 +409,11 @@ public class MainUIController extends BaseFXController {
     public void setGeneratorConfigIntoUI(GeneratorConfig generatorConfig) {
         projectFolderField.setText(generatorConfig.getProjectFolder());
         modelTargetPackage.setText(generatorConfig.getModelPackage());
-        generateKeysField.setText(generatorConfig.getGenerateKeys());
+        optimisticLockerColumnName.setText(generatorConfig.getOptimisticLockerColumnName());
         modelTargetProject.setText(generatorConfig.getModelPackageTargetFolder());
         daoTargetPackage.setText(generatorConfig.getDaoPackage());
 		daoTargetProject.setText(generatorConfig.getDaoTargetFolder());
-		mapperName.setText(generatorConfig.getMapperName());
+        logicDeleteFlagColumnName.setText(generatorConfig.getLogicDeleteFlagColumnName());
 		mapperTargetPackage.setText(generatorConfig.getMappingXMLPackage());
         mappingTargetProject.setText(generatorConfig.getMappingXMLTargetFolder());
         tableNameField.setText(generatorConfig.getTableName());

@@ -1,7 +1,5 @@
 package com.zzg.mybatis.generator.bridge;
 
-import com.jcraft.jsch.Session;
-import com.zzg.mybatis.generator.controller.PictureProcessStateController;
 import com.zzg.mybatis.generator.model.DatabaseConfig;
 import com.zzg.mybatis.generator.model.DbType;
 import com.zzg.mybatis.generator.model.GeneratorConfig;
@@ -100,24 +98,8 @@ public class MybatisGeneratorBridge {
             tableConfig.setDelimitIdentifiers(true);
         }
 
-        //添加GeneratedKey主键生成
-		if (StringUtils.isNotEmpty(generatorConfig.getGenerateKeys())) {
-            String dbType2 = dbType;
-            if (DbType.MySQL.name().equals(dbType2) || DbType.MySQL_8.name().equals(dbType)) {
-                dbType2 = "JDBC";
-                //dbType为JDBC，且配置中开启useGeneratedKeys时，Mybatis会使用Jdbc3KeyGenerator,
-                //使用该KeyGenerator的好处就是直接在一次INSERT 语句内，通过resultSet获取得到 生成的主键值，
-                //并很好的支持设置了读写分离代理的数据库
-                //例如阿里云RDS + 读写分离代理
-                //无需指定主库
-                //当使用SelectKey时，Mybatis会使用SelectKeyGenerator，INSERT之后，多发送一次查询语句，获得主键值
-                //在上述读写分离被代理的情况下，会得不到正确的主键
-            }
-			tableConfig.setGeneratedKey(new GeneratedKey(generatorConfig.getGenerateKeys(), dbType2, true, null));
-		}
-
-        if (generatorConfig.getMapperName() != null) {
-            tableConfig.setMapperName(generatorConfig.getMapperName());
+        if (generatorConfig.getLogicDeleteFlagColumnName() != null) {
+            tableConfig.setMapperName(generatorConfig.getLogicDeleteFlagColumnName());
         }
         // add ignore columns
         if (ignoredColumns != null) {
@@ -182,8 +164,11 @@ public class MybatisGeneratorBridge {
         if (generatorConfig.isComment()) {
             commentConfig.addProperty("columnRemarks", "true");
         }
-        if (generatorConfig.isAnnotation()) {
-            commentConfig.addProperty("annotations", "true");
+        if (StringUtils.isNoneEmpty(generatorConfig.getOptimisticLockerColumnName())){
+            commentConfig.addProperty("optimisticLockerColumnName", generatorConfig.getOptimisticLockerColumnName());
+        }
+        if (StringUtils.isNoneEmpty(generatorConfig.getLogicDeleteFlagColumnName())){
+            commentConfig.addProperty("logicDeleteFlagColumnName", generatorConfig.getLogicDeleteFlagColumnName());
         }
         context.setCommentGeneratorConfiguration(commentConfig);
         // set java file encoding
@@ -275,11 +260,8 @@ public class MybatisGeneratorBridge {
 		if (StringUtils.isNotEmpty(mappingXMLPackage)) {
 			sb.append(mappingXMLPackage.replace(".", "/")).append("/");
 		}
-		if (StringUtils.isNotEmpty(generatorConfig.getMapperName())) {
-			sb.append(generatorConfig.getMapperName()).append(".xml");
-		} else {
-			sb.append(generatorConfig.getDomainObjectName()).append("Mapper.xml");
-		}
+
+        sb.append(generatorConfig.getDomainObjectName()).append("Mapper.xml");
 
 		return sb.toString();
 	}
